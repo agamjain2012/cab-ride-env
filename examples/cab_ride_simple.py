@@ -13,7 +13,8 @@ async def main():
     
     print("Connecting to Cab Ride Environment...")
     try:
-        async with CabRideEnv(base_url="https://huggingface.co/spaces/agamjain90/cab-ride-env") as client:
+        # Use direct Space URL: https://<user>-<space>.hf.space
+        async with CabRideEnv(base_url="https://agamjain90-cab-ride-env.hf.space") as client:
             print("Resetting environment...")
             result = await client.reset()
             obs = result.observation
