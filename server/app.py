@@ -1,5 +1,6 @@
 """FastAPI application for the Cab Ride Environment."""
 
+from fastapi.responses import RedirectResponse
 from openenv.core.env_server import create_app
 
 # Support both in-repo and standalone imports
@@ -14,6 +15,10 @@ except ImportError:
 app = create_app(
     CabRideEnvironment, CabAction, CabObservation, env_name="cab_ride_env"
 )
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
 
 def main():
     import uvicorn
