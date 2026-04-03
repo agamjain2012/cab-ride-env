@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-cab-ride-env"
+version = "0.1.0"
+description = "Cab Ride Environment for OpenEnv - Bengaluru city dispatching simulation"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]>=0.2.1",
+    "fastapi>=0.115.0",
+    "pydantic>=2.0.0",
+    "uvicorn>=0.24.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+packages = ["cab_ride_env", "cab_ride_env.server"]
+package-dir = { "cab_ride_env" = ".", "cab_ride_env.server" = "server" }

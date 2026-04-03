@@ -1,0 +1,10 @@
+spec_version: 1
+name: cab_ride_env
+type: simulation
+runtime: fastapi
+app: server.app:app
+port: 8000
+description: "A Bengaluru-based cab dispatching simulation for optimizing rider wait times and driver positioning."
+version: "0.1.0"
+category: "logistics"
+tags: ["bengaluru", "dispatching", "optimization"]
