@@ -36,6 +36,7 @@ class CabRideEnv(EnvClient[CabAction, CabObservation, CabState]):
             demand_forecast=obs_data.get("demand_forecast", {}),
             reward=payload.get("reward", 0.0),
             done=payload.get("done", False),
+            metadata=obs_data.get("metadata", {}),
         )
 
         return StepResult(

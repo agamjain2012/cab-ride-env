@@ -5,7 +5,7 @@ Data models for Cab Ride Environment.
 from __future__ import annotations
 
 from typing import List, Dict
-from pydantic import Field
+from pydantic import BaseModel, Field
 from openenv.core.env_server import Action, Observation, State
 
 
@@ -23,6 +23,19 @@ class CabAction(Action):
     Action for Cab Ride environment.
     """
     driver_id: int
+
+
+class CabReward(BaseModel):
+    """
+    Reward for Cab Ride environment.
+    """
+    wait_time_penalty: float
+    positioning_penalty: float
+    invalid_action_penalty: float = 0.0
+
+    @property
+    def value(self) -> float:
+        return -(self.wait_time_penalty + self.positioning_penalty + self.invalid_action_penalty)
 
 
 class CabObservation(Observation):

@@ -6,9 +6,9 @@ from openenv.core.env_server import Environment
 
 # Support both in-repo and standalone imports
 try:
-    from ..models import CabAction, CabObservation, CabState, DriverInfo, DriverState
+    from ..models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
 except ImportError:
-    from models import CabAction, CabObservation, CabState, DriverInfo, DriverState
+    from models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
 
 # Bengaluru Zones and a simplified travel time matrix (minutes)
 ZONES = [
@@ -100,7 +100,7 @@ class CabRideEnvironment(Environment):
         
         return {"pickup": pickup, "dropoff": dropoff, "request_time": self.simulation_time}
 
-    def _make_observation(self, reward: float = 0.0, done: bool = False) -> CabObservation:
+    def _make_observation(self, reward: Optional[CabReward] = None, done: bool = False) -> CabObservation:
         available_drivers = []
         pickup = self.pending_request["pickup"]
         for d in self.drivers:
@@ -112,13 +112,16 @@ class CabRideEnvironment(Environment):
                     eta_to_pickup=float(eta)
                 ))
         
+        # Use default zero reward if none provided
+        current_reward = reward or CabReward(wait_time_penalty=0.0, positioning_penalty=0.0)
+        
         obs = CabObservation(
             pickup_location=pickup,
             dropoff_location=self.pending_request["dropoff"],
             available_drivers=available_drivers,
             simulation_time=self.simulation_time,
             demand_forecast=DEMAND_FORECAST,
-            reward=reward,
+            reward=float(current_reward.value),
             done=done
         )
         
@@ -145,7 +148,8 @@ class CabRideEnvironment(Environment):
         driver = next((d for d in self.drivers if d.driver_id == selected_driver_id), None)
         
         if not driver or driver.status != "IDLE":
-            return self._make_observation(reward=-100.0, done=True)
+            reward = CabReward(wait_time_penalty=0.0, positioning_penalty=0.0, invalid_action_penalty=100.0)
+            return self._make_observation(reward=reward, done=True)
 
         pickup = self.pending_request["pickup"]
         dropoff = self.pending_request["dropoff"]
@@ -158,7 +162,10 @@ class CabRideEnvironment(Environment):
         
         # Reward logic: penalize wait time and low demand at destination
         expected_idle_at_dest = (1.0 - DEMAND_FORECAST[dropoff]) * 30.0
-        reward = -(wait_time_rider + expected_idle_at_dest)
+        reward = CabReward(
+            wait_time_penalty=float(wait_time_rider),
+            positioning_penalty=float(expected_idle_at_dest)
+        )
         
         # Update driver state
         driver.current_zone = dropoff
@@ -170,7 +177,7 @@ class CabRideEnvironment(Environment):
         self._state.simulation_time = self.simulation_time
         
         done = self._state.step_count >= self.max_steps
-        return self._make_observation(reward=float(reward), done=done)
+        return self._make_observation(reward=reward, done=done)
 
     @property
     def state(self):
