@@ -2,7 +2,7 @@
 title: Cab Ride RL Environment
 emoji: 🚕
 colorFrom: yellow
-colorTo: black
+colorTo: pink
 sdk: docker
 pinned: false
 app_port: 8000
