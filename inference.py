@@ -8,13 +8,17 @@ from openai import OpenAI
 
 # Import Cab Ride Environment Client and Models
 try:
-    from client import CabRideEnv
-    from models import CabAction
-except ImportError:
-    # Handle cases where it might be run from different contexts
-    sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-    from client import CabRideEnv
-    from models import CabAction
+    from .client import CabRideEnv
+    from .models import CabAction
+except (ImportError, ValueError):
+    try:
+        from client import CabRideEnv
+        from models import CabAction
+    except ImportError:
+        # Handle cases where it might be run from different contexts
+        sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+        from client import CabRideEnv
+        from models import CabAction
 
 # Mandatory Environment Variables
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
@@ -126,5 +130,8 @@ Respond with ONLY the driver ID number.
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
-if __name__ == "__main__":
+def run() -> None:
     asyncio.run(main())
+
+if __name__ == "__main__":
+    run()

@@ -21,6 +21,10 @@ dev = [
     "pytest-cov>=4.0.0",
 ]
 
+[project.scripts]
+server = "cab_ride_env.server.app:main"
+inference = "cab_ride_env.inference:run"
+
 [tool.setuptools]
 include-package-data = true
 packages = ["cab_ride_env", "cab_ride_env.server"]

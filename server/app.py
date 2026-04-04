@@ -7,9 +7,16 @@ from openenv.core.env_server import create_app
 try:
     from ..models import CabAction, CabObservation
     from .cab_ride_environment import CabRideEnvironment
-except ImportError:
-    from models import CabAction, CabObservation
-    from server.cab_ride_environment import CabRideEnvironment
+except (ImportError, ValueError):
+    try:
+        from models import CabAction, CabObservation
+        from server.cab_ride_environment import CabRideEnvironment
+    except ImportError:
+        import sys
+        import os
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+        from models import CabAction, CabObservation
+        from server.cab_ride_environment import CabRideEnvironment
 
 # Create the FastAPI app
 app = create_app(

@@ -7,8 +7,14 @@ from openenv.core.env_server import Environment
 # Support both in-repo and standalone imports
 try:
     from ..models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
-except ImportError:
-    from models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
+except (ImportError, ValueError):
+    try:
+        from models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
+    except ImportError:
+        import sys
+        import os
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+        from models import CabAction, CabObservation, CabReward, CabState, DriverInfo, DriverState
 
 # Bengaluru Zones and a simplified travel time matrix (minutes)
 ZONES = [
