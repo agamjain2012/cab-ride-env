@@ -8,3 +8,10 @@ description: "A Bengaluru-based cab dispatching simulation for optimizing rider 
 version: "0.1.0"
 category: "logistics"
 tags: ["bengaluru", "dispatching", "optimization"]
+tasks:
+  - id: "easy"
+    description: "Assign a cab to a single rider with optimal driver availability."
+  - id: "medium"
+    description: "Manage multiple riders and drivers to minimize wait times."
+  - id: "hard"
+    description: "Optimize dispatching in high-demand scenarios with positioning constraints."

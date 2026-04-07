@@ -136,18 +136,29 @@ class CabRideEnvironment(Environment):
             
         return obs
 
+    def list_tasks(self) -> List[str]:
+        """Returns the list of available tasks."""
+        return ["easy", "medium", "hard"]
+
     def _calculate_score(self) -> float:
-        """Programmatic grader: returns 0.0 to 1.0."""
+        """Programmatic grader: returns score strictly between 0.0 and 1.0."""
+        score = 0.0
         if self.task_id == "easy":
             # Optimal wait time is 0 (Driver 1 is in Indiranagar)
             # score = 1.0 if wait_time < 5, else 0.0
-            return 1.0 if self.total_wait_time <= 5.0 else 0.0
+            score = 1.0 if self.total_wait_time <= 5.0 else 0.0
+        else:
+            # For medium/hard, score based on average wait time
+            avg_wait = self.total_wait_time / max(1, self.steps_taken)
+            if avg_wait <= 15.0: 
+                score = 1.0
+            elif avg_wait >= 45.0: 
+                score = 0.0
+            else:
+                score = 1.0 - (avg_wait - 15.0) / 30.0
         
-        # For medium/hard, score based on average wait time
-        avg_wait = self.total_wait_time / max(1, self.steps_taken)
-        if avg_wait <= 15.0: return 1.0
-        if avg_wait >= 45.0: return 0.0
-        return 1.0 - (avg_wait - 15.0) / 30.0
+        # Ensure score is strictly between 0 and 1 as per validator requirements
+        return min(max(score, 0.01), 0.99)
 
     def step(self, action: CabAction):
         selected_driver_id = action.driver_id
