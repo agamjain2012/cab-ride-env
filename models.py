@@ -4,7 +4,7 @@ Data models for Cab Ride Environment.
 
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from openenv.core.env_server import Action, Observation, State
 
@@ -47,6 +47,9 @@ class CabObservation(Observation):
     available_drivers: List[DriverInfo]
     simulation_time: float
     demand_forecast: Dict[str, float] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    score: float | None = None
+    task_id: str | None = None
 
 
 class DriverState(State):
@@ -64,7 +67,13 @@ class CabState(State):
     """
     State for Cab Ride environment.
     """
+    task_id: str
     drivers: List[DriverState]
     pending_requests: List[Dict]
     simulation_time: float
     step_count: int
+    total_wait_time: float = 0.0
+    steps_taken: int = 0
+
+
+CabObservation.model_rebuild()

@@ -53,26 +53,43 @@ class CabRideEnvironment(Environment):
     def __init__(self):
         super().__init__()
         self.max_steps = 20
-        self.reset()
+        self.task_id = "medium"
+        self.simulation_time = 0.0
+        self.total_wait_time = 0.0
+        self.steps_taken = 0
+        self.drivers = []
+        self.pending_request = None
+        self._state = None
 
     def reset(self, task_id: str = "medium", **kwargs):
-        self.task_id = task_id
+        # Extremely robust task_id extraction
+        if "task" in kwargs:
+            t = kwargs["task"]
+            if isinstance(t, dict):
+                task_id = t.get("task_id") or t.get("id") or task_id
+            elif isinstance(t, str):
+                task_id = t
+        elif "task_id" in kwargs:
+            task_id = kwargs["task_id"]
+        elif "id" in kwargs:
+            task_id = kwargs["id"]
+            
+        self.task_id = str(task_id)
         self.simulation_time = 0.0
         self.total_wait_time = 0.0
         self.steps_taken = 0
         
         # Configure based on task
-        if task_id == "easy":
+        if self.task_id == "easy":
             self.max_steps = 1
             num_drivers = 3
-            # Fixed setup for easy task
             self.drivers = [
                 DriverState(driver_id=0, current_zone="Electronic City", status="IDLE"),
                 DriverState(driver_id=1, current_zone="Indiranagar", status="IDLE"),
                 DriverState(driver_id=2, current_zone="Whitefield", status="IDLE")
             ]
             self.pending_request = {"pickup": "Indiranagar", "dropoff": "Koramangala", "request_time": 0.0}
-        elif task_id == "hard":
+        elif self.task_id == "hard":
             self.max_steps = 30
             num_drivers = 10
             self.drivers = [DriverState(driver_id=i, current_zone=random.choice(ZONES), status="IDLE") for i in range(num_drivers)]
@@ -84,19 +101,19 @@ class CabRideEnvironment(Environment):
             self.pending_request = self._generate_request()
 
         self._state = CabState(
+            task_id=self.task_id,
             drivers=self.drivers,
             pending_requests=[self.pending_request],
             simulation_time=self.simulation_time,
             step_count=0,
+            total_wait_time=0.0,
+            steps_taken=0,
             episode_id=str(uuid.uuid4())
         )
         return self._make_observation()
 
     def _generate_request(self) -> Dict[str, Any]:
-        # Logic for demand-based request generation
         if self.task_id == "hard":
-            # In hard mode, requests mostly come from low-demand residential zones 
-            # and want to go to high-demand business zones.
             pickup = random.choices(ZONES, weights=[1.0 - DEMAND_FORECAST[z] for z in ZONES])[0]
             dropoff = random.choices(ZONES, weights=[DEMAND_FORECAST[z] for z in ZONES])[0]
             if pickup == dropoff: dropoff = random.choice([z for z in ZONES if z != pickup])
@@ -118,9 +135,12 @@ class CabRideEnvironment(Environment):
                     eta_to_pickup=float(eta)
                 ))
         
-        # Use default zero reward if none provided
         current_reward = reward or CabReward(wait_time_penalty=0.0, positioning_penalty=0.0)
         
+        metadata = {"task_id": self.task_id}
+        if done:
+            metadata["score"] = self._calculate_score()
+
         obs = CabObservation(
             pickup_location=pickup,
             dropoff_location=self.pending_request["dropoff"],
@@ -128,36 +148,28 @@ class CabRideEnvironment(Environment):
             simulation_time=self.simulation_time,
             demand_forecast=DEMAND_FORECAST,
             reward=float(current_reward.value),
-            done=done
+            done=done,
+            metadata=metadata,
+            score=metadata.get("score"),
+            task_id=self.task_id
         )
         
-        if done:
-            obs.metadata["score"] = self._calculate_score()
-            
         return obs
 
     def list_tasks(self) -> List[str]:
-        """Returns the list of available tasks."""
         return ["easy", "medium", "hard"]
 
     def _calculate_score(self) -> float:
-        """Programmatic grader: returns score strictly between 0.0 and 1.0."""
-        score = 0.0
-        if self.task_id == "easy":
-            # Optimal wait time is 0 (Driver 1 is in Indiranagar)
-            # score = 1.0 if wait_time < 5, else 0.0
-            score = 1.0 if self.total_wait_time <= 5.0 else 0.0
-        else:
-            # For medium/hard, score based on average wait time
-            avg_wait = self.total_wait_time / max(1, self.steps_taken)
-            if avg_wait <= 15.0: 
-                score = 1.0
-            elif avg_wait >= 45.0: 
-                score = 0.0
-            else:
-                score = 1.0 - (avg_wait - 15.0) / 30.0
+        # Score based on average wait time for all tasks
+        avg_wait = self.total_wait_time / max(1, self.steps_taken)
         
-        # Ensure score is strictly between 0 and 1 as per validator requirements
+        if avg_wait <= 5.0:
+            score = 1.0
+        elif avg_wait >= 45.0:
+            score = 0.0
+        else:
+            score = 1.0 - (avg_wait - 5.0) / 40.0
+        
         return min(max(score, 0.01), 0.99)
 
     def step(self, action: CabAction):
@@ -177,21 +189,22 @@ class CabRideEnvironment(Environment):
         self.total_wait_time += wait_time_rider
         self.steps_taken += 1
         
-        # Reward logic: penalize wait time and low demand at destination
         expected_idle_at_dest = (1.0 - DEMAND_FORECAST[dropoff]) * 30.0
         reward = CabReward(
             wait_time_penalty=float(wait_time_rider),
             positioning_penalty=float(expected_idle_at_dest)
         )
         
-        # Update driver state
         driver.current_zone = dropoff
         self.simulation_time += wait_time_rider + travel_time_trip
 
-        # Generate next request
         self.pending_request = self._generate_request()
+
         self._state.step_count += 1
         self._state.simulation_time = self.simulation_time
+        self._state.total_wait_time = self.total_wait_time
+        self._state.steps_taken = self.steps_taken
+        self._state.pending_requests = [self.pending_request]
         
         done = self._state.step_count >= self.max_steps
         return self._make_observation(reward=reward, done=done)
@@ -199,3 +212,17 @@ class CabRideEnvironment(Environment):
     @property
     def state(self):
         return self._state
+
+    @state.setter
+    def state(self, value: CabState):
+        if value is None: return
+        self._state = value
+        self.task_id = value.task_id
+        self.simulation_time = value.simulation_time
+        self.drivers = value.drivers
+        self.pending_request = value.pending_requests[0] if value.pending_requests else None
+        self.total_wait_time = value.total_wait_time
+        self.steps_taken = value.steps_taken
+        if self.task_id == "easy": self.max_steps = 1
+        elif self.task_id == "hard": self.max_steps = 30
+        else: self.max_steps = 20

@@ -18,9 +18,15 @@ except (ImportError, ValueError):
         from models import CabAction, CabObservation
         from server.cab_ride_environment import CabRideEnvironment
 
+# Create a single persistent environment instance
+env_instance = CabRideEnvironment()
+
+def env_factory():
+    return env_instance
+
 # Create the FastAPI app
 app = create_app(
-    CabRideEnvironment, CabAction, CabObservation, env_name="cab_ride_env"
+    env_factory, CabAction, CabObservation, env_name="cab_ride_env"
 )
 
 @app.get("/")
