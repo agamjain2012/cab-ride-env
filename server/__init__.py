@@ -2,6 +2,9 @@
 Cab Ride Environment Server.
 """
 
-from .cab_ride_environment import CabRideEnvironment
+try:
+    from .cab_ride_environment import CabRideEnvironment
+except (ImportError, ValueError):
+    from cab_ride_environment import CabRideEnvironment
 
 __all__ = ["CabRideEnvironment"]

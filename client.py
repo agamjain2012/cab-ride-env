@@ -9,7 +9,10 @@ from typing import Any, Dict
 from openenv.core.client_types import StepResult
 from openenv.core.env_client import EnvClient
 
-from .models import CabAction, CabObservation, CabState, DriverInfo
+try:
+    from .models import CabAction, CabObservation, CabState, DriverInfo
+except (ImportError, ValueError):
+    from models import CabAction, CabObservation, CabState, DriverInfo
 
 class CabRideEnv(EnvClient[CabAction, CabObservation, CabState]):
     """
