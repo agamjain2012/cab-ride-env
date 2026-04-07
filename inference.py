@@ -92,25 +92,35 @@ Respond with ONLY the driver ID number.
 """
                 
                 # Use OpenAI client for LLM call
-                response = client_ai.chat.completions.create(
-                    model=MODEL_NAME,
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=5,
-                    temperature=0
-                )
-                
-                action_str = (response.choices[0].message.content or "").strip()
                 try:
-                    driver_id = int(action_str)
-                except ValueError:
-                    # Fallback if LLM output is not a number
+                    response = client_ai.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=5,
+                        temperature=0
+                    )
+                    action_str = (response.choices[0].message.content or "").strip()
+                except Exception as e:
+                    print(f"[DEBUG] LLM API call failed: {e}", flush=True)
+                    action_str = "0" # Default fallback
+
+                try:
+                    # Robust parsing: extract digits if LLM is verbose
+                    import re
+                    match = re.search(r"\d+", action_str)
+                    driver_id = int(match.group()) if match else 0
+                except (ValueError, AttributeError):
                     driver_id = obs.available_drivers[0].driver_id if obs.available_drivers else 0
 
-                result = await env.step(CabAction(driver_id=driver_id))
-                obs = result.observation
-                reward = result.reward
-                done = result.done
-                error = None # Env returns no explicit error string currently
+                try:
+                    result = await env.step(CabAction(driver_id=driver_id))
+                    obs = result.observation
+                    reward = result.reward
+                    done = result.done
+                except Exception as e:
+                    print(f"[DEBUG] Environment step failed: {e}", flush=True)
+                    done = True
+                    break
 
                 rewards.append(reward)
                 steps_taken = step
