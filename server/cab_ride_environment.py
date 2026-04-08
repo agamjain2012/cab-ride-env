@@ -60,6 +60,7 @@ class CabRideEnvironment(Environment):
         self.drivers = []
         self.pending_request = None
         self._state = None
+        self._terminal_score_override: Optional[float] = None
 
     def reset(self, task_id: str = "medium", **kwargs):
         # Extremely robust task_id extraction
@@ -78,6 +79,7 @@ class CabRideEnvironment(Environment):
         self.simulation_time = 0.0
         self.total_wait_time = 0.0
         self.steps_taken = 0
+        self._terminal_score_override = None
         
         # Configure based on task
         if self.task_id == "easy":
@@ -139,7 +141,11 @@ class CabRideEnvironment(Environment):
         
         metadata = {"task_id": self.task_id}
         if done:
-            metadata["score"] = self._calculate_score()
+            metadata["score"] = (
+                self._clamp_score(self._terminal_score_override)
+                if self._terminal_score_override is not None
+                else self._calculate_score()
+            )
 
         obs = CabObservation(
             pickup_location=pickup,
@@ -159,6 +165,9 @@ class CabRideEnvironment(Environment):
     def list_tasks(self) -> List[str]:
         return ["easy", "medium", "hard"]
 
+    def _clamp_score(self, score: float) -> float:
+        return min(max(float(score), 0.01), 0.99)
+
     def _calculate_score(self) -> float:
         # Score based on average wait time for all tasks
         avg_wait = self.total_wait_time / max(1, self.steps_taken)
@@ -170,7 +179,7 @@ class CabRideEnvironment(Environment):
         else:
             score = 1.0 - (avg_wait - 5.0) / 40.0
         
-        return min(max(score, 0.01), 0.99)
+        return self._clamp_score(score)
 
     def step(self, action: CabAction):
         selected_driver_id = action.driver_id
@@ -178,6 +187,7 @@ class CabRideEnvironment(Environment):
         
         if not driver or driver.status != "IDLE":
             reward = CabReward(wait_time_penalty=0.0, positioning_penalty=0.0, invalid_action_penalty=100.0)
+            self._terminal_score_override = 0.01
             return self._make_observation(reward=reward, done=True)
 
         pickup = self.pending_request["pickup"]

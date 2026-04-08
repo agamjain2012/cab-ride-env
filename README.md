@@ -51,10 +51,10 @@ The action is a single integer representing the `driver_id` of the driver assign
 | `hard` | Residential Rush | 30 | 10 | Hard | Requests originate in low-demand residential zones and move to high-demand business hubs. Requires strategic positioning. |
 
 ## Programmatic Grader
-Performance is scored from **0.0 to 1.0** based on the average rider wait time across the episode.
-- **Score 1.0:** Average wait time ≤ 15 minutes.
-- **Score 0.0:** Average wait time ≥ 45 minutes.
-- **Linear interpolation** between 15 and 45 minutes.
+Performance is scored strictly between **0.01 and 0.99** based on the average rider wait time across the episode.
+- **Best exposed score: 0.99:** Returned when the computed score would otherwise be 1.0.
+- **Worst exposed score: 0.01:** Returned when the computed score would otherwise be 0.0, and also for invalid-action terminal failures.
+- **Linear interpolation** between the wait-time thresholds, followed by clamping into `(0.0, 1.0)`.
 
 ## Setup and Usage
 

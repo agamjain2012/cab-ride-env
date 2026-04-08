@@ -10,6 +10,9 @@ from cab_ride_env import CabRideEnv, CabAction
 # Initialize OpenAI client
 client_ai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+def clamp_score(score: float) -> float:
+    return min(max(float(score), 0.01), 0.99)
+
 async def run_task(task_id: str):
     print(f"\n--- Starting Task: {task_id} ---")
     async with CabRideEnv(base_url="http://localhost:8000") as client:
@@ -59,7 +62,7 @@ Respond with ONLY the driver ID number.
             done = result.done
             total_reward += result.reward
             
-        score = obs.metadata.get("score", 0.0)
+        score = clamp_score(obs.metadata.get("score", 0.01))
         print(f"Task {task_id} Finished. Total Reward: {total_reward:.2f}, Grader Score: {score:.2f}")
         return score
 
@@ -77,7 +80,7 @@ async def main():
         except Exception as e:
             print(f"Error running task {t}: {e}")
     
-    avg_score = sum(scores) / len(scores) if scores else 0
+    avg_score = sum(scores) / len(scores) if scores else 0.01
     print(f"\nFinal Baseline Score: {avg_score:.2f}")
 
 if __name__ == "__main__":

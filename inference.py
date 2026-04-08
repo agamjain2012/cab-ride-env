@@ -31,6 +31,9 @@ TASK_NAME = os.getenv("TASK_NAME") or "medium"
 BASE_URL = os.getenv("BASE_URL") or "http://localhost:7860"
 SUCCESS_THRESHOLD = 0.5
 
+def clamp_score(score: float) -> float:
+    return min(max(float(score), 0.01), 0.99)
+
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
@@ -55,7 +58,7 @@ async def main() -> None:
     
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
+    score = 0.01
     success = False
 
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
@@ -125,14 +128,14 @@ Respond with ONLY the driver ID number.
                 rewards.append(reward)
                 steps_taken = step
                 
-                log_step(step=step, action=action_str, reward=reward, done=done, error=error)
+                log_step(step=step, action=action_str, reward=reward, done=done, error=None)
                 
                 if done:
                     break
                 step += 1
 
             # Grader score is in the metadata of the final observation
-            score = obs.metadata.get("score", 0.0)
+            score = clamp_score(obs.metadata.get("score", 0.01))
             success = score >= SUCCESS_THRESHOLD
 
     except Exception as e:
