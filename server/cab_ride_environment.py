@@ -137,8 +137,15 @@ class CabRideEnvironment(Environment):
                     eta_to_pickup=float(eta)
                 ))
         
-        current_reward = reward or CabReward(wait_time_penalty=0.0, positioning_penalty=0.0)
-        
+        # Normalize reward to 0.0 - 1.0 range
+        # Max penalty is around 75 (45 wait + 30 positioning)
+        # We'll use 80 as a safe upper bound for normalization
+        if reward:
+            penalty = abs(float(reward.value))
+            step_reward = max(0.0, 1.0 - (penalty / 80.0))
+        else:
+            step_reward = 0.0
+            
         metadata = {"task_id": self.task_id}
         if done:
             metadata["score"] = (
@@ -153,7 +160,7 @@ class CabRideEnvironment(Environment):
             available_drivers=available_drivers,
             simulation_time=self.simulation_time,
             demand_forecast=DEMAND_FORECAST,
-            reward=float(current_reward.value),
+            reward=float(step_reward),
             done=done,
             metadata=metadata,
             score=metadata.get("score"),
@@ -166,7 +173,7 @@ class CabRideEnvironment(Environment):
         return ["easy", "medium", "hard"]
 
     def _clamp_score(self, score: float) -> float:
-        return min(max(float(score), 0.01), 0.99)
+        return min(max(float(score), 0.0), 1.0)
 
     def _calculate_score(self) -> float:
         # Score based on average wait time for all tasks
