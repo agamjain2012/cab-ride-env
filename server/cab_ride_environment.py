@@ -173,7 +173,7 @@ class CabRideEnvironment(Environment):
         return ["easy", "medium", "hard"]
 
     def _clamp_score(self, score: float) -> float:
-        return min(max(float(score), 0.0), 1.0)
+        return min(max(float(score), 0.01), 0.99)
 
     def _calculate_score(self) -> float:
         # Score based on average wait time for all tasks

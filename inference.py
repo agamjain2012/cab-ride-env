@@ -28,8 +28,8 @@ BASE_URL = os.getenv("BASE_URL") or "http://localhost:7860"
 SUCCESS_THRESHOLD = 0.5
 
 def clamp_score(score: float) -> float:
-    """Ensure score is strictly within [0.0, 1.0]."""
-    return min(max(float(score), 0.0), 1.0)
+    """Ensure score is strictly within (0.0, 1.0)."""
+    return min(max(float(score), 0.01), 0.99)
 
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
@@ -119,7 +119,7 @@ Respond with ONLY the driver ID number.
             step += 1
 
         # Retrieve score from final metadata
-        score = clamp_score(obs.metadata.get("score", 0.0))
+        score = clamp_score(obs.metadata.get("score", 0.01))
         success = score >= SUCCESS_THRESHOLD
 
     except Exception as e:
